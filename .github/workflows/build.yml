@@ -14,7 +14,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           
-      - name: Instalar Dependências Virtuais (Pacotes de 2024)
+      - name: Instalar Dependências Virtuais (Blindagem Gráfica Total)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers libvulkan1 xvfb libgles2 libegl1 libgl1 libglx-mesa0
           
       - name: Criar Chave Android (Keystore)
@@ -47,6 +47,10 @@ jobs:
           
           # LIMPEZA DO CACHE
           rm -rf $PROJECT_DIR/.godot
+          
+          # Forçar o arquivo export_presets a esquecer os caminhos do seu tablet
+          sed -i 's|keystore/debug=".*"|keystore/debug=""|g' $PROJECT_DIR/export_presets.cfg || true
+          sed -i 's|keystore/release=".*"|keystore/release=""|g' $PROJECT_DIR/export_presets.cfg || true
           
           # Recriar a pasta "android" do zero
           mkdir -p $PROJECT_DIR/android/build
