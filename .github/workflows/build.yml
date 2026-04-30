@@ -55,7 +55,19 @@ jobs:
           echo "[editor_plugins]" >> $PROJECT_DIR/project.godot
           echo 'enabled=PackedStringArray("res://addons/GDMP/plugin.cfg")' >> $PROJECT_DIR/project.godot
           
-          # 2. CRIAR PRESET PERFEITO
+          # 2. Recriar a pasta Android (AGORA COM PERMISSÕES E BLOQUEIO DE LEITURA)
+          mkdir -p $PROJECT_DIR/android/build
+          unzip /home/runner/.local/share/godot/export_templates/4.4.stable/android_source.zip -d $PROJECT_DIR/android/build/
+          echo "" > $PROJECT_DIR/android/.gdignore
+          chmod +x $PROJECT_DIR/android/build/gradlew
+          
+          # 3. Baixa a IA do MediaPipe
+          wget https://github.com/j20001970/GDMP/releases/download/v0.6/GDMP-v0.6.zip -O plugin.zip
+          unzip plugin.zip -d temp_plugin
+          mkdir -p $PROJECT_DIR/addons
+          cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
+          
+          # 4. CRIAR PRESET PERFEITO EXTENDIDO (Com os traços corretos!)
           echo "Gerando export_presets.cfg definitivo..."
           rm -f $PROJECT_DIR/export_presets.cfg
           cat << 'EOF' > $PROJECT_DIR/export_presets.cfg
@@ -71,7 +83,10 @@ jobs:
           [preset.0.options]
           gradle_build/use_gradle_build=true
           permissions/camera=true
-          architectures/arm64_v8a=true
+          architectures/armeabi-v7a=false
+          architectures/arm64-v8a=true
+          architectures/x86=false
+          architectures/x86_64=false
           package/unique_name="com.anderson.mocap"
           package/name="MocapApp"
           package/signed=true
@@ -80,17 +95,7 @@ jobs:
           keystore/debug_password="android"
           EOF
           
-          # 3. Recriar a pasta "android" do zero
-          mkdir -p $PROJECT_DIR/android/build
-          unzip /home/runner/.local/share/godot/export_templates/4.4.stable/android_source.zip -d $PROJECT_DIR/android/build/
-          
-          # 4. Baixa a IA do MediaPipe
-          wget https://github.com/j20001970/GDMP/releases/download/v0.6/GDMP-v0.6.zip -O plugin.zip
-          unzip plugin.zip -d temp_plugin
-          mkdir -p $PROJECT_DIR/addons
-          cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
-          
-          # 5. Configurar rotas do Android SDK (NOME DO ARQUIVO CORRIGIDO PARA GODOT 4.4!)
+          # 5. Configurar rotas do Android SDK
           mkdir -p "/home/runner/.config/godot"
           cat << 'EOF' > /home/runner/.config/godot/editor_settings-4.4.tres
           [gd_resource type="EditorSettings" format=3]
@@ -105,7 +110,7 @@ jobs:
           cd $PROJECT_DIR
           mkdir -p export_build
           xvfb-run -a godot --headless --rendering-driver opengl3 --editor --quit || true
-          xvfb-run -a godot --headless --rendering-driver opengl3 --verbose --export-debug "Android" export_build/mocap.apk
+          xvfb-run -a godot --headless --rendering-driver opengl3 --export-debug "Android" export_build/mocap.apk
           
       - name: Disponibilizar APK para Download
         uses: actions/upload-artifact@v4
