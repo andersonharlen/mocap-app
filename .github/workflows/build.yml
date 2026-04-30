@@ -14,8 +14,8 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           
-      - name: Instalar Dependências Virtuais
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers libvulkan1 xvfb
+      - name: Instalar Dependências Virtuais (Com Suporte GLES2 para a IA)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers libvulkan1 xvfb libgles2
           
       - name: Criar Chave Android (Keystore)
         run: |
@@ -45,7 +45,7 @@ jobs:
           unzip inse-prototipo.zip -d projeto
           PROJECT_DIR=$(dirname $(find projeto -name "project.godot" | head -n 1))
           
-          # 2. LIMPEZA DO CACHE (A cura para o Erro 134)
+          # 2. LIMPEZA DO CACHE
           echo "Limpando cache antigo do Godot..."
           rm -rf $PROJECT_DIR/.godot
           
@@ -70,11 +70,11 @@ jobs:
           echo "export/android/debug_keystore_user = \"android\"" >> $EDITOR_SETTINGS
           echo "export/android/debug_keystore_pass = \"android\"" >> $EDITOR_SETTINGS
           
-          # 6. Compila o projeto (com motor gráfico blindado e cache limpo)
+          # 6. Compila o projeto (Com o xvfb blindado no modo "Automático")
           cd $PROJECT_DIR
           mkdir -p export_build
-          xvfb-run godot --headless --rendering-driver opengl3 --editor --quit || true
-          xvfb-run godot --headless --rendering-driver opengl3 --export-debug "Android" export_build/mocap.apk
+          xvfb-run -a godot --headless --rendering-driver opengl3 --editor --quit || true
+          xvfb-run -a godot --headless --rendering-driver opengl3 --export-debug "Android" export_build/mocap.apk
           
       - name: Disponibilizar APK para Download
         uses: actions/upload-artifact@v4
