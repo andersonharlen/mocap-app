@@ -8,7 +8,7 @@ jobs:
       - name: Baixar o seu código
         uses: actions/checkout@v4
       
-      - name: Preparar Java (Para Gradle)
+      - name: Preparar Java (Para a Chave de Segurança)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -28,52 +28,53 @@ jobs:
           unzip Godot_v4.4-stable_linux.x86_64.zip
           sudo mv Godot_v4.4-stable_linux.x86_64 /usr/local/bin/godot
           
-      - name: Instalar Templates de Exportação
+      - name: Instalar Templates de Exportação (Dupla Blindagem)
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.4-stable/Godot_v4.4-stable_export_templates.tpz
-          mkdir -p /home/runner/.local/share/godot/export_templates/4.4.stable/
           unzip Godot_v4.4-stable_export_templates.tpz -d temp/
-          mv temp/templates/* /home/runner/.local/share/godot/export_templates/4.4.stable/
+          mkdir -p /home/runner/.local/share/godot/export_templates/4.4.stable/
+          mkdir -p /home/runner/.local/share/godot/export_templates/4.4.stable.official/
+          cp -r temp/templates/* /home/runner/.local/share/godot/export_templates/4.4.stable/
+          cp -r temp/templates/* /home/runner/.local/share/godot/export_templates/4.4.stable.official/
           
-      - name: Montar Projeto, Curar Erros e Injetar IA
+      - name: Configurar SDK e Chave (Dupla Blindagem)
+        run: |
+          mkdir -p /home/runner/.config/godot
+          cat << 'EOF' > /home/runner/.config/godot/editor_settings-4.4.tres
+          [gd_resource type="EditorSettings" format=3]
+          [resource]
+          export/android/android_sdk_path = "/usr/local/lib/android/sdk"
+          export/android/debug_keystore = "/home/runner/.android/debug.keystore"
+          export/android/debug_keystore_user = "android"
+          export/android/debug_keystore_pass = "android"
+          EOF
+          cp /home/runner/.config/godot/editor_settings-4.4.tres /home/runner/.config/godot/editor_settings-4.tres
+          
+      - name: Montar Projeto, Injetar IA e Compilar
         run: |
           unzip inse-prototipo.zip -d projeto
           PROJECT_DIR=$(dirname $(find projeto -name "project.godot" | head -n 1))
           
           rm -rf $PROJECT_DIR/.godot
           
-          # 1. CIRURGIA NO PROJECT.GODOT
-          echo "Curando arquivo de projeto principal..."
+          # Limpeza e Cura do project.godot
           awk '/^\[autoload\]/{flag=1; next} /^\[/{flag=0} !flag' $PROJECT_DIR/project.godot > $PROJECT_DIR/temp.godot
           mv $PROJECT_DIR/temp.godot $PROJECT_DIR/project.godot
           
-          # Garantir Nome, Ícone e Cena Principal na marra
           echo "" >> $PROJECT_DIR/project.godot
           echo "[application]" >> $PROJECT_DIR/project.godot
           echo 'config/name="MocapApp"' >> $PROJECT_DIR/project.godot
           echo 'run/main_scene="res://mocap_main.tscn"' >> $PROJECT_DIR/project.godot
-          echo 'config/icon="res://icon.svg"' >> $PROJECT_DIR/project.godot
-          
           echo "[editor_plugins]" >> $PROJECT_DIR/project.godot
           echo 'enabled=PackedStringArray("res://addons/GDMP/plugin.cfg")' >> $PROJECT_DIR/project.godot
           
-          # 2. Recriar a pasta Android com o SELO DE VERIFICAÇÃO que faltava!
-          mkdir -p $PROJECT_DIR/android/build
-          unzip /home/runner/.local/share/godot/export_templates/4.4.stable/android_source.zip -d $PROJECT_DIR/android/build/
-          echo "" > $PROJECT_DIR/android/.gdignore
-          chmod +x $PROJECT_DIR/android/build/gradlew
-          
-          # O SEGREDO QUE FALTAVA: O "Carimbo" de versão exigido pelo Godot
-          echo "4.4.stable.official" > $PROJECT_DIR/android/build/.export_version
-          
-          # 3. Baixa a IA do MediaPipe
+          # Baixar IA MediaPipe
           wget https://github.com/j20001970/GDMP/releases/download/v0.6/GDMP-v0.6.zip -O plugin.zip
           unzip plugin.zip -d temp_plugin
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
-          # 4. CRIAR PRESET PERFEITO
-          echo "Gerando export_presets.cfg definitivo..."
+          # PRESET LIVRE DE GRADLE (O fim dos erros de configuração)
           rm -f $PROJECT_DIR/export_presets.cfg
           cat << 'EOF' > $PROJECT_DIR/export_presets.cfg
           [preset.0]
@@ -86,7 +87,7 @@ jobs:
           export_path="export_build/mocap.apk"
           
           [preset.0.options]
-          gradle_build/use_gradle_build=true
+          gradle_build/use_gradle_build=false
           permissions/camera=true
           architectures/armeabi-v7a=false
           architectures/arm64-v8a=true
@@ -95,24 +96,9 @@ jobs:
           package/unique_name="com.anderson.mocap"
           package/name="MocapApp"
           package/signed=true
-          keystore/debug="/home/runner/.android/debug.keystore"
-          keystore/debug_user="android"
-          keystore/debug_password="android"
           EOF
           
-          # 5. Configurar rotas do Android SDK e JAVA (Injetando o Java na força bruta!)
-          mkdir -p "/home/runner/.config/godot"
-          cat << EOF > /home/runner/.config/godot/editor_settings-4.4.tres
-          [gd_resource type="EditorSettings" format=3]
-          [resource]
-          export/android/android_sdk_path = "/usr/local/lib/android/sdk"
-          export/android/java_sdk_path = "$JAVA_HOME"
-          export/android/debug_keystore = "/home/runner/.android/debug.keystore"
-          export/android/debug_keystore_user = "android"
-          export/android/debug_keystore_pass = "android"
-          EOF
-          
-          # 6. Compila o projeto limpo
+          # Compilar
           cd $PROJECT_DIR
           mkdir -p export_build
           xvfb-run -a godot --headless --rendering-driver opengl3 --editor --quit || true
