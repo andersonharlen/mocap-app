@@ -5,7 +5,7 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-      - name: Baixar o teu código
+      - name: Baixar o seu código
         uses: actions/checkout@v4
       
       - name: Preparar Java (Para Gradle)
@@ -41,12 +41,12 @@ jobs:
           ANDROID_KEYSTORE_DEBUG_USER: android
           ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
-          # 1. Extrai o teu projeto pelo nome exato
+          # 1. Extrai o seu projeto pelo nome exato
           unzip inse-prototipo.zip -d projeto
           PROJECT_DIR=$(dirname $(find projeto -name "project.godot" | head -n 1))
           
           # 2. Recriar a pasta "android" do zero para o Gradle funcionar!
-          echo "A recriar pasta de build do Android..."
+          echo "Recriando pasta de build do Android..."
           mkdir -p $PROJECT_DIR/android/build
           unzip $HOME/.local/share/godot/export_templates/4.4.stable/android_source.zip -d $PROJECT_DIR/android/build/
           
@@ -56,7 +56,7 @@ jobs:
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
-          # 4. Configurar as rotas para o Godot achar o Android SDK no servidor
+          # 4. Configurar as rotas pro Godot achar o Android SDK no servidor
           export EDITOR_SETTINGS="$HOME/.config/godot/editor_settings-4.tres"
           mkdir -p "$HOME/.config/godot"
           echo "[gd_resource type=\"EditorSettings\" format=3]" > $EDITOR_SETTINGS
