@@ -1,3 +1,40 @@
+name: Compilar Godot APK com IA Externa
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Baixar o seu código
+        uses: actions/checkout@v4
+      
+      - name: Preparar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          
+      - name: Instalar Dependências Virtuais
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers libvulkan1 xvfb
+          
+      - name: Criar Chave Android (Keystore)
+        run: |
+          mkdir -p ~/.android
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore ~/.android/debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+          
+      - name: Instalar Godot 4.6.2 (A Versão Correta do Tablet)
+        run: |
+          wget https://github.com/godotengine/godot/releases/download/4.6.2-stable/Godot_v4.6.2-stable_linux.x86_64.zip
+          unzip Godot_v4.6.2-stable_linux.x86_64.zip
+          sudo mv Godot_v4.6.2-stable_linux.x86_64 /usr/local/bin/godot
+          
+      - name: Instalar Templates de Exportação 4.6.2
+        run: |
+          wget https://github.com/godotengine/godot/releases/download/4.6.2-stable/Godot_v4.6.2-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/4.6.2.stable/
+          unzip Godot_v4.6.2-stable_export_templates.tpz -d temp/
+          mv temp/templates/* ~/.local/share/godot/export_templates/4.6.2.stable/
+          
       - name: Montar Projeto e Injetar IA
         run: |
           # Extrai o seu projeto pelo nome exato
@@ -15,3 +52,9 @@
           mkdir -p export_build
           xvfb-run godot --headless --rendering-driver opengl3 --editor --quit || true
           xvfb-run godot --headless --rendering-driver opengl3 --export-debug "Android" export_build/mocap.apk
+          
+      - name: Disponibilizar APK para Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aplicativo-Mocap-Final
+          path: "**/export_build/mocap.apk"
