@@ -17,65 +17,26 @@ jobs:
       - name: Instalar Dependências Virtuais
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers libvulkan1 xvfb libgles2 libegl1 libgl1 libglx-mesa0
           
+      - name: Instalar Godot 4.4
+        run: |
+          wget https://github.com/godotengine/godot/releases/download/4.4-stable/Godot_v4.4-stable_linux.x86_64.zip
+          unzip Godot_v4.4-stable_linux.x86_64.zip
+          sudo mv Godot_v4.4-stable_linux.x86_64 /usr/local/bin/godot
+          
+      - name: Instalar Templates de Exportação
+        run: |
+          wget https://github.com/godotengine/godot/releases/download/4.4-stable/Godot_v4.4-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/4.4.stable/
+          unzip Godot_v4.4-stable_export_templates.tpz -d temp/
+          mv temp/templates/* ~/.local/share/godot/export_templates/4.4.stable/
+          
       - name: Criar Chave Android
         run: |
-          mkdir -p /home/runner/.android
-          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore /home/runner/.android/debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+          mkdir -p ~/.android
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore ~/.android/debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
           
-      - name: Instalar Godot 4.3 (Versão Estável para o MediaPipe)
+      - name: Configurar Godot Editor Settings
         run: |
-          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
-          unzip Godot_v4.3-stable_linux.x86_64.zip
-          sudo mv Godot_v4.3-stable_linux.x86_64 /usr/local/bin/godot
-          
-      - name: Instalar Templates de Exportação 4.3
-        run: |
-          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz
-          mkdir -p /home/runner/.local/share/godot/export_templates/4.3.stable/
-          unzip Godot_v4.3-stable_export_templates.tpz -d temp/
-          mv temp/templates/* /home/runner/.local/share/godot/export_templates/4.3.stable/
-          
-      - name: Montar Projeto, Curar Erros e Injetar IA
-        run: |
-          unzip inse-prototipo.zip -d projeto
-          PROJECT_DIR=$(dirname $(find projeto -name "project.godot" | head -n 1))
-          
-          rm -rf $PROJECT_DIR/.godot
-          
-          # 1. CIRURGIA NO PROJECT.GODOT
-          echo "Curando arquivo de projeto principal..."
-          awk '/^\[autoload\]/{flag=1; next} /^\[/{flag=0} !flag' $PROJECT_DIR/project.godot > $PROJECT_DIR/temp.godot
-          mv $PROJECT_DIR/temp.godot $PROJECT_DIR/project.godot
-          
-          # Garantir Nome, Ícone e Cena Principal na marra
-          echo "" >> $PROJECT_DIR/project.godot
-          echo "[application]" >> $PROJECT_DIR/project.godot
-          echo 'config/name="MocapApp"' >> $PROJECT_DIR/project.godot
-          echo 'run/main_scene="res://mocap_main.tscn"' >> $PROJECT_DIR/project.godot
-          echo 'config/icon="res://icon.svg"' >> $PROJECT_DIR/project.godot
-          
-          echo "[editor_plugins]" >> $PROJECT_DIR/project.godot
-          echo 'enabled=PackedStringArray("res://addons/GDMP/plugin.cfg")' >> $PROJECT_DIR/project.godot
-          
-          # 2. Recriar a pasta Android
-          mkdir -p $PROJECT_DIR/android/build
-          unzip /home/runner/.local/share/godot/export_templates/4.3.stable/android_source.zip -d $PROJECT_DIR/android/build/
-          echo "" > $PROJECT_DIR/android/.gdignore
-          chmod +x $PROJECT_DIR/android/build/gradlew
-          echo "4.3.stable.official" > $PROJECT_DIR/android/build/.export_version
-          
-          # 3. Baixa a IA do MediaPipe
-          wget https://github.com/j20001970/GDMP/releases/download/v0.6/GDMP-v0.6.zip -O plugin.zip
-          unzip plugin.zip -d temp_plugin
-          mkdir -p $PROJECT_DIR/addons
-          cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
-          
-          # 4. CRIAR PRESET PERFEITO PARA O GODOT 4.3
-          echo "Gerando export_presets.cfg definitivo..."
-          rm -f $PROJECT_DIR/export_presets.cfg
-          cat << 'EOF' > $PROJECT_DIR/export_presets.cfg
-          [preset.0]
-          name="Android"
-          platform="Android"
-          runnable=true
-          export_filter="all_
+          mkdir -p ~/.config/godot
+          cat << EOF > ~/.config/godot/editor_settings-4.4.tres
+          [gd_resource type="Editor
