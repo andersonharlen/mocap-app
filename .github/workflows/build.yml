@@ -48,12 +48,12 @@ jobs:
           # 2. LIMPEZA DO CACHE
           rm -rf $PROJECT_DIR/.godot
           
-          # 3. CIRURGIA DE AUTOLOADS FANTASMAS (Apaga as referências velhas do project.godot)
+          # 3. CIRURGIA DE AUTOLOADS FANTASMAS
           echo "Limpando scripts inexistentes da memória do Godot..."
           awk '/^\[autoload\]/{flag=1; next} /^\[/{flag=0} !flag' $PROJECT_DIR/project.godot > $PROJECT_DIR/temp.godot
           mv $PROJECT_DIR/temp.godot $PROJECT_DIR/project.godot
           
-          # 4. CRIAR UM PRESET PERFEITO DO ZERO (Esmaga o mutante anterior)
+          # 4. CRIAR UM PRESET PERFEITO (Com permissão de câmera e Gradle ativado)
           echo "Gerando export_presets.cfg definitivo..."
           rm -f $PROJECT_DIR/export_presets.cfg
           cat << 'EOF' > $PROJECT_DIR/export_presets.cfg
@@ -64,8 +64,11 @@ jobs:
           export_filter="all_resources"
           include_filter=""
           exclude_filter=""
+          export_path="export_build/mocap.apk"
           
           [preset.0.options]
+          gradle_build/use_gradle_build=true
+          permissions/camera=true
           architectures/arm64-v8a=true
           package/unique_name="com.anderson.mocap"
           package/name="MocapApp"
@@ -87,7 +90,7 @@ jobs:
           mkdir -p "$HOME/.config/godot"
           echo "[gd_resource type=\"EditorSettings\" format=3]" > $EDITOR_SETTINGS
           echo "[resource]" >> $EDITOR_SETTINGS
-          echo "export/android/android_sdk_path = \"$ANDROID_SDK_ROOT\"" >> $EDITOR_SETTINGS
+          echo "export/android/android_sdk_path = \"$ANDROID_HOME\"" >> $EDITOR_SETTINGS
           echo "export/android/debug_keystore = \"$HOME/.android/debug.keystore\"" >> $EDITOR_SETTINGS
           echo "export/android/debug_keystore_user = \"android\"" >> $EDITOR_SETTINGS
           echo "export/android/debug_keystore_pass = \"android\"" >> $EDITOR_SETTINGS
