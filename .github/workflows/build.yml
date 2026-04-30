@@ -8,7 +8,7 @@ jobs:
       - name: Baixar o seu código
         uses: actions/checkout@v4
       
-      - name: Preparar Java (Para Gradle)
+      - name: Preparar Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -42,7 +42,7 @@ jobs:
           
           rm -rf $PROJECT_DIR/.godot
           
-          # 1. CIRURGIA NO PROJECT.GODOT (Curando scripts e injetando cena inicial)
+          # 1. CIRURGIA NO PROJECT.GODOT
           awk '/^\[autoload\]/{flag=1; next} /^\[/{flag=0} !flag' $PROJECT_DIR/project.godot > $PROJECT_DIR/temp.godot
           mv $PROJECT_DIR/temp.godot $PROJECT_DIR/project.godot
           
@@ -53,7 +53,7 @@ jobs:
           echo "[editor_plugins]" >> $PROJECT_DIR/project.godot
           echo 'enabled=PackedStringArray("res://addons/GDMP/plugin.cfg")' >> $PROJECT_DIR/project.godot
           
-          # 2. INSTALAR TEMPLATE DE CONSTRUÇÃO DO ANDROID CORRETAMENTE
+          # 2. CONFIGURAR PASTA ANDROID
           mkdir -p $PROJECT_DIR/android/build
           unzip /home/runner/.local/share/godot/export_templates/4.4.stable/android_source.zip -d $PROJECT_DIR/android/build/
           echo "4.4.stable" > $PROJECT_DIR/android/build/.export_version
@@ -65,7 +65,7 @@ jobs:
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
-          # 4. CRIAR PRESET PERFEITO (Com Gradle ativado)
+          # 4. CRIAR PRESET PERFEITO (Com os filtros de volta!)
           rm -f $PROJECT_DIR/export_presets.cfg
           cat << 'EOF' > $PROJECT_DIR/export_presets.cfg
           [preset.0]
@@ -73,12 +73,17 @@ jobs:
           platform="Android"
           runnable=true
           export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
           export_path="export_build/mocap.apk"
           
           [preset.0.options]
-          gradle_build/use_gradle_build=true
+          gradle_build/use_gradle_build=false
           permissions/camera=true
-          architectures/arm64_v8a=true
+          architectures/armeabi-v7a=false
+          architectures/arm64-v8a=true
+          architectures/x86=false
+          architectures/x86_64=false
           package/unique_name="com.anderson.mocap"
           package/name="MocapApp"
           package/signed=true
@@ -87,9 +92,9 @@ jobs:
           keystore/debug_password="android"
           EOF
           
-          # 5. CONFIGURAÇÕES DO EDITOR (A Ratoeira: Injetando a rota do JAVA e SDK juntas)
+          # 5. CONFIGURAÇÕES DO EDITOR
           mkdir -p /home/runner/.config/godot
-          cat << EOF > /home/runner/.config/godot/editor_settings-4.tres
+          cat << EOF > /home/runner/.config/godot/editor_settings-4.4.tres
           [gd_resource type="EditorSettings" format=3]
           [resource]
           export/android/android_sdk_path = "/usr/local/lib/android/sdk"
@@ -98,7 +103,6 @@ jobs:
           export/android/debug_keystore_user = "android"
           export/android/debug_keystore_pass = "android"
           EOF
-          cp /home/runner/.config/godot/editor_settings-4.tres /home/runner/.config/godot/editor_settings-4.4.tres
           
           # 6. COMPILAR
           cd $PROJECT_DIR
