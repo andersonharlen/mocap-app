@@ -14,10 +14,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           
-      - name: Instalar Dependências Virtuais (Blindagem Gráfica Total)
+      - name: Instalar Dependências Virtuais
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers libvulkan1 xvfb libgles2 libegl1 libgl1 libglx-mesa0
           
-      - name: Criar Chave Android (Keystore)
+      - name: Criar Chave Android
         run: |
           mkdir -p $HOME/.android
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore $HOME/.android/debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
@@ -41,28 +41,30 @@ jobs:
           ANDROID_KEYSTORE_DEBUG_USER: android
           ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
-          # Extrai o seu projeto pelo nome exato
           unzip inse-prototipo.zip -d projeto
           PROJECT_DIR=$(dirname $(find projeto -name "project.godot" | head -n 1))
           
-          # LIMPEZA DO CACHE
           rm -rf $PROJECT_DIR/.godot
           
-          # Forçar o arquivo export_presets a esquecer os caminhos do seu tablet
-          sed -i 's|keystore/debug=".*"|keystore/debug=""|g' $PROJECT_DIR/export_presets.cfg || true
-          sed -i 's|keystore/release=".*"|keystore/release=""|g' $PROJECT_DIR/export_presets.cfg || true
+          # FORÇAR A CRIAÇÃO DE UM PRESET LIMPO E SEM ERROS NO SERVIDOR
+          echo '[preset.0]' > $PROJECT_DIR/export_presets.cfg
+          echo 'name="Android"' >> $PROJECT_DIR/export_presets.cfg
+          echo 'platform="Android"' >> $PROJECT_DIR/export_presets.cfg
+          echo 'runnable=true' >> $PROJECT_DIR/export_presets.cfg
+          echo '[preset.0.options]' >> $PROJECT_DIR/export_presets.cfg
+          echo 'architectures/arm64-v8a=true' >> $PROJECT_DIR/export_presets.cfg
+          echo 'package/unique_name="com.anderson.mocap"' >> $PROJECT_DIR/export_presets.cfg
+          echo 'package/name="MocapApp"' >> $PROJECT_DIR/export_presets.cfg
+          echo 'package/signed=true' >> $PROJECT_DIR/export_presets.cfg
           
-          # Recriar a pasta "android" do zero
           mkdir -p $PROJECT_DIR/android/build
           unzip $HOME/.local/share/godot/export_templates/4.4.stable/android_source.zip -d $PROJECT_DIR/android/build/
           
-          # Baixa a IA do MediaPipe
           wget https://github.com/j20001970/GDMP/releases/download/v0.6/GDMP-v0.6.zip -O plugin.zip
           unzip plugin.zip -d temp_plugin
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
-          # Configurar as rotas pro Godot achar o Android SDK
           export EDITOR_SETTINGS="$HOME/.config/godot/editor_settings-4.tres"
           mkdir -p "$HOME/.config/godot"
           echo "[gd_resource type=\"EditorSettings\" format=3]" > $EDITOR_SETTINGS
@@ -72,7 +74,6 @@ jobs:
           echo "export/android/debug_keystore_user = \"android\"" >> $EDITOR_SETTINGS
           echo "export/android/debug_keystore_pass = \"android\"" >> $EDITOR_SETTINGS
           
-          # Compila o projeto
           cd $PROJECT_DIR
           mkdir -p export_build
           xvfb-run -a godot --headless --rendering-driver opengl3 --editor --quit || true
