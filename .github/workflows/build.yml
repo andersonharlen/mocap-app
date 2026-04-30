@@ -19,8 +19,8 @@ jobs:
           
       - name: Criar Chave Android
         run: |
-          mkdir -p $HOME/.android
-          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore $HOME/.android/debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+          mkdir -p /home/runner/.android
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore /home/runner/.android/debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
           
       - name: Instalar Godot 4.4
         run: |
@@ -31,29 +31,30 @@ jobs:
       - name: Instalar Templates de Exportação
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.4-stable/Godot_v4.4-stable_export_templates.tpz
-          mkdir -p $HOME/.local/share/godot/export_templates/4.4.stable/
+          mkdir -p /home/runner/.local/share/godot/export_templates/4.4.stable/
           unzip Godot_v4.4-stable_export_templates.tpz -d temp/
-          mv temp/templates/* $HOME/.local/share/godot/export_templates/4.4.stable/
+          mv temp/templates/* /home/runner/.local/share/godot/export_templates/4.4.stable/
           
       - name: Montar Projeto, Curar Erros e Injetar IA
-        env:
-          ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/.android/debug.keystore
-          ANDROID_KEYSTORE_DEBUG_USER: android
-          ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
-          # 1. Extrai o seu projeto pelo nome exato
           unzip inse-prototipo.zip -d projeto
           PROJECT_DIR=$(dirname $(find projeto -name "project.godot" | head -n 1))
           
-          # 2. LIMPEZA DO CACHE
           rm -rf $PROJECT_DIR/.godot
           
-          # 3. CIRURGIA DE AUTOLOADS FANTASMAS
-          echo "Limpando scripts inexistentes da memória do Godot..."
+          # 1. CIRURGIA NO PROJECT.GODOT: Ligar a Cena Principal e o Plugin da IA
+          echo "Curando arquivo de projeto principal..."
           awk '/^\[autoload\]/{flag=1; next} /^\[/{flag=0} !flag' $PROJECT_DIR/project.godot > $PROJECT_DIR/temp.godot
           mv $PROJECT_DIR/temp.godot $PROJECT_DIR/project.godot
           
-          # 4. CRIAR UM PRESET PERFEITO (Com permissão de câmera e Gradle ativado)
+          echo "" >> $PROJECT_DIR/project.godot
+          echo "[application]" >> $PROJECT_DIR/project.godot
+          echo 'run/main_scene="res://mocap_main.tscn"' >> $PROJECT_DIR/project.godot
+          
+          echo "[editor_plugins]" >> $PROJECT_DIR/project.godot
+          echo 'enabled=PackedStringArray("res://addons/GDMP/plugin.cfg")' >> $PROJECT_DIR/project.godot
+          
+          # 2. CRIAR PRESET PERFEITO (Com caminhos absolutos e Gradle ativado)
           echo "Gerando export_presets.cfg definitivo..."
           rm -f $PROJECT_DIR/export_presets.cfg
           cat << 'EOF' > $PROJECT_DIR/export_presets.cfg
@@ -73,29 +74,33 @@ jobs:
           package/unique_name="com.anderson.mocap"
           package/name="MocapApp"
           package/signed=true
+          keystore/debug="/home/runner/.android/debug.keystore"
+          keystore/debug_user="android"
+          keystore/debug_password="android"
           EOF
           
-          # 5. Recriar a pasta "android" do zero
+          # 3. Recriar a pasta "android" do zero
           mkdir -p $PROJECT_DIR/android/build
-          unzip $HOME/.local/share/godot/export_templates/4.4.stable/android_source.zip -d $PROJECT_DIR/android/build/
+          unzip /home/runner/.local/share/godot/export_templates/4.4.stable/android_source.zip -d $PROJECT_DIR/android/build/
           
-          # 6. Baixa a IA do MediaPipe
+          # 4. Baixa a IA do MediaPipe
           wget https://github.com/j20001970/GDMP/releases/download/v0.6/GDMP-v0.6.zip -O plugin.zip
           unzip plugin.zip -d temp_plugin
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
-          # 7. Configurar as rotas pro Godot achar o Android SDK
-          export EDITOR_SETTINGS="$HOME/.config/godot/editor_settings-4.tres"
-          mkdir -p "$HOME/.config/godot"
-          echo "[gd_resource type=\"EditorSettings\" format=3]" > $EDITOR_SETTINGS
-          echo "[resource]" >> $EDITOR_SETTINGS
-          echo "export/android/android_sdk_path = \"$ANDROID_HOME\"" >> $EDITOR_SETTINGS
-          echo "export/android/debug_keystore = \"$HOME/.android/debug.keystore\"" >> $EDITOR_SETTINGS
-          echo "export/android/debug_keystore_user = \"android\"" >> $EDITOR_SETTINGS
-          echo "export/android/debug_keystore_pass = \"android\"" >> $EDITOR_SETTINGS
+          # 5. Configurar rotas do Android SDK com caminhos de ferro absolutos
+          mkdir -p "/home/runner/.config/godot"
+          cat << 'EOF' > /home/runner/.config/godot/editor_settings-4.tres
+          [gd_resource type="EditorSettings" format=3]
+          [resource]
+          export/android/android_sdk_path = "/usr/local/lib/android/sdk"
+          export/android/debug_keystore = "/home/runner/.android/debug.keystore"
+          export/android/debug_keystore_user = "android"
+          export/android/debug_keystore_pass = "android"
+          EOF
           
-          # 8. Compila o projeto limpo
+          # 6. Compila o projeto limpo
           cd $PROJECT_DIR
           mkdir -p export_build
           xvfb-run -a godot --headless --rendering-driver opengl3 --editor --quit || true
