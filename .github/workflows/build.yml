@@ -65,7 +65,7 @@ jobs:
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
-          # 4. CRIAR PRESET PERFEITO (Com os filtros de volta!)
+          # 4. CRIAR PRESET BLINDADO (Com traços, underscores e chaves antigas/novas juntas)
           rm -f $PROJECT_DIR/export_presets.cfg
           cat << 'EOF' > $PROJECT_DIR/export_presets.cfg
           [preset.0]
@@ -75,13 +75,17 @@ jobs:
           export_filter="all_resources"
           include_filter=""
           exclude_filter=""
-          export_path="export_build/mocap.apk"
+          export_path="mocap.apk"
           
           [preset.0.options]
-          gradle_build/use_gradle_build=false
+          gradle_build/use_gradle_build=true
           permissions/camera=true
           architectures/armeabi-v7a=false
+          architectures/armeabi_v7a=false
           architectures/arm64-v8a=true
+          architectures/arm64_v8a=true
+          architectures/arm32=false
+          architectures/arm64=true
           architectures/x86=false
           architectures/x86_64=false
           package/unique_name="com.anderson.mocap"
@@ -90,6 +94,7 @@ jobs:
           keystore/debug="/home/runner/.android/debug.keystore"
           keystore/debug_user="android"
           keystore/debug_password="android"
+          keystore/debug_pass="android"
           EOF
           
           # 5. CONFIGURAÇÕES DO EDITOR
@@ -104,14 +109,13 @@ jobs:
           export/android/debug_keystore_pass = "android"
           EOF
           
-          # 6. COMPILAR
+          # 6. COMPILAR (Exportando na raiz para evitar erros de pasta)
           cd $PROJECT_DIR
-          mkdir -p export_build
           xvfb-run -a godot --headless --rendering-driver opengl3 --editor --quit || true
-          xvfb-run -a godot --headless --rendering-driver opengl3 --export-debug "Android" export_build/mocap.apk
+          xvfb-run -a godot --headless --rendering-driver opengl3 --export-debug "Android" mocap.apk
           
       - name: Disponibilizar APK para Download
         uses: actions/upload-artifact@v4
         with:
           name: Aplicativo-Mocap-Final
-          path: "**/export_build/mocap.apk"
+          path: "**/mocap.apk"
