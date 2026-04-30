@@ -5,7 +5,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - name: Baixar o seu código
+      - name: Baixar o teu código
         uses: actions/checkout@v4
       
       - name: Preparar Java
@@ -65,51 +65,66 @@ jobs:
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
-          # 4. CRIAR PRESET BLINDADO (Com traços, underscores e chaves antigas/novas juntas)
+          # 4. CRIAR PRESET EXAUSTIVO (O Fim do Erro de Validação)
           rm -f $PROJECT_DIR/export_presets.cfg
           cat << 'EOF' > $PROJECT_DIR/export_presets.cfg
           [preset.0]
           name="Android"
           platform="Android"
           runnable=true
+          dedicated_server=false
+          custom_features=""
           export_filter="all_resources"
           include_filter=""
           exclude_filter=""
           export_path="mocap.apk"
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          encrypt_pck=false
+          encrypt_directory=false
           
           [preset.0.options]
+          custom_template/debug=""
+          custom_template/release=""
           gradle_build/use_gradle_build=true
-          permissions/camera=true
+          gradle_build/export_format=0
+          gradle_build/min_sdk="24"
+          gradle_build/target_sdk="34"
           architectures/armeabi-v7a=false
-          architectures/armeabi_v7a=false
           architectures/arm64-v8a=true
-          architectures/arm64_v8a=true
-          architectures/arm32=false
-          architectures/arm64=true
           architectures/x86=false
           architectures/x86_64=false
           package/unique_name="com.anderson.mocap"
           package/name="MocapApp"
           package/signed=true
+          package/app_category=0
+          package/retain_data_on_uninstall=false
+          package/exclude_from_recents=false
+          screen/immersive_mode=true
+          screen/support_small=true
+          screen/support_normal=true
+          screen/support_large=true
+          screen/support_xlarge=true
+          permissions/camera=true
           keystore/debug="/home/runner/.android/debug.keystore"
           keystore/debug_user="android"
           keystore/debug_password="android"
-          keystore/debug_pass="android"
           EOF
           
-          # 5. CONFIGURAÇÕES DO EDITOR
+          # 5. CONFIGURAÇÕES DO EDITOR (Rotas Duplas para Garantia)
           mkdir -p /home/runner/.config/godot
           cat << EOF > /home/runner/.config/godot/editor_settings-4.4.tres
           [gd_resource type="EditorSettings" format=3]
           [resource]
           export/android/android_sdk_path = "/usr/local/lib/android/sdk"
           export/android/java_sdk_path = "${JAVA_HOME}"
+          export/android/java_path = "${JAVA_HOME}"
           export/android/debug_keystore = "/home/runner/.android/debug.keystore"
           export/android/debug_keystore_user = "android"
           export/android/debug_keystore_pass = "android"
           EOF
           
-          # 6. COMPILAR (Exportando na raiz para evitar erros de pasta)
+          # 6. COMPILAR
           cd $PROJECT_DIR
           xvfb-run -a godot --headless --rendering-driver opengl3 --editor --quit || true
           xvfb-run -a godot --headless --rendering-driver opengl3 --export-debug "Android" mocap.apk
