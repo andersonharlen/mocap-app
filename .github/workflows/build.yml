@@ -1,0 +1,52 @@
+name: Compilar Godot APK com IA Externa
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o seu código
+        uses: actions/checkout@v4
+      
+      - name: Preparar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          
+      - name: Instalar Godot
+        run: |
+          wget https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_linux.x86_64.zip
+          unzip Godot_v4.2.2-stable_linux.x86_64.zip
+          sudo mv Godot_v4.2.2-stable_linux.x86_64 /usr/local/bin/godot
+          
+      - name: Instalar Templates de Exportação
+        run: |
+          wget https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/4.2.2.stable/
+          unzip Godot_v4.2.2-stable_export_templates.tpz -d temp/
+          mv temp/templates/* ~/.local/share/godot/export_templates/4.2.2.stable/
+          
+      - name: Montar Projeto e Injetar IA
+        run: |
+          # 1. Extrai o seu projeto (que agora está leve)
+          unzip *.zip -d projeto
+          PROJECT_DIR=$(dirname $(find projeto -name "project.godot" | head -n 1))
+          
+          # 2. BAIXA A IA DIRETAMENTE (O truque para ignorar os 99MB)
+          wget https://github.com/j20001970/GDMP/releases/download/v0.6.0/gdmp-v0.6.0-android.zip -O plugin.zip
+          unzip plugin.zip -d temp_plugin
+          mkdir -p $PROJECT_DIR/addons
+          cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
+          
+          # 3. Compila o APK final
+          cd $PROJECT_DIR
+          mkdir -p export_build
+          godot --headless --editor --quit || true
+          godot --headless --export-debug "Android" export_build/mocap.apk
+          
+      - name: Disponibilizar APK para você
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aplicativo-Mocap-Final
+          path: "**/export_build/mocap.apk"
