@@ -35,36 +35,54 @@ jobs:
           unzip Godot_v4.4-stable_export_templates.tpz -d temp/
           mv temp/templates/* $HOME/.local/share/godot/export_templates/4.4.stable/
           
-      - name: Montar Projeto, Limpar Cache e Injetar IA
+      - name: Montar Projeto, Curar Erros e Injetar IA
         env:
           ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/.android/debug.keystore
           ANDROID_KEYSTORE_DEBUG_USER: android
           ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
+          # 1. Extrai o seu projeto pelo nome exato
           unzip inse-prototipo.zip -d projeto
           PROJECT_DIR=$(dirname $(find projeto -name "project.godot" | head -n 1))
           
+          # 2. LIMPEZA DO CACHE
           rm -rf $PROJECT_DIR/.godot
           
-          # FORÇAR A CRIAÇÃO DE UM PRESET LIMPO E SEM ERROS NO SERVIDOR
-          echo '[preset.0]' > $PROJECT_DIR/export_presets.cfg
-          echo 'name="Android"' >> $PROJECT_DIR/export_presets.cfg
-          echo 'platform="Android"' >> $PROJECT_DIR/export_presets.cfg
-          echo 'runnable=true' >> $PROJECT_DIR/export_presets.cfg
-          echo '[preset.0.options]' >> $PROJECT_DIR/export_presets.cfg
-          echo 'architectures/arm64-v8a=true' >> $PROJECT_DIR/export_presets.cfg
-          echo 'package/unique_name="com.anderson.mocap"' >> $PROJECT_DIR/export_presets.cfg
-          echo 'package/name="MocapApp"' >> $PROJECT_DIR/export_presets.cfg
-          echo 'package/signed=true' >> $PROJECT_DIR/export_presets.cfg
+          # 3. CIRURGIA DE AUTOLOADS FANTASMAS (Apaga as referências velhas do project.godot)
+          echo "Limpando scripts inexistentes da memória do Godot..."
+          awk '/^\[autoload\]/{flag=1; next} /^\[/{flag=0} !flag' $PROJECT_DIR/project.godot > $PROJECT_DIR/temp.godot
+          mv $PROJECT_DIR/temp.godot $PROJECT_DIR/project.godot
           
+          # 4. CRIAR UM PRESET PERFEITO DO ZERO (Esmaga o mutante anterior)
+          echo "Gerando export_presets.cfg definitivo..."
+          rm -f $PROJECT_DIR/export_presets.cfg
+          cat << 'EOF' > $PROJECT_DIR/export_presets.cfg
+          [preset.0]
+          name="Android"
+          platform="Android"
+          runnable=true
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          
+          [preset.0.options]
+          architectures/arm64-v8a=true
+          package/unique_name="com.anderson.mocap"
+          package/name="MocapApp"
+          package/signed=true
+          EOF
+          
+          # 5. Recriar a pasta "android" do zero
           mkdir -p $PROJECT_DIR/android/build
           unzip $HOME/.local/share/godot/export_templates/4.4.stable/android_source.zip -d $PROJECT_DIR/android/build/
           
+          # 6. Baixa a IA do MediaPipe
           wget https://github.com/j20001970/GDMP/releases/download/v0.6/GDMP-v0.6.zip -O plugin.zip
           unzip plugin.zip -d temp_plugin
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
+          # 7. Configurar as rotas pro Godot achar o Android SDK
           export EDITOR_SETTINGS="$HOME/.config/godot/editor_settings-4.tres"
           mkdir -p "$HOME/.config/godot"
           echo "[gd_resource type=\"EditorSettings\" format=3]" > $EDITOR_SETTINGS
@@ -74,6 +92,7 @@ jobs:
           echo "export/android/debug_keystore_user = \"android\"" >> $EDITOR_SETTINGS
           echo "export/android/debug_keystore_pass = \"android\"" >> $EDITOR_SETTINGS
           
+          # 8. Compila o projeto limpo
           cd $PROJECT_DIR
           mkdir -p export_build
           xvfb-run -a godot --headless --rendering-driver opengl3 --editor --quit || true
