@@ -14,8 +14,8 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           
-      - name: Instalar Monitor Virtual (Corrige o Erro 11)
-        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Instalar Drivers de Vídeo Virtuais (Mata o Erro 11)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers libvulkan1
           
       - name: Criar Chave de Segurança Android (Keystore)
         run: |
@@ -47,11 +47,11 @@ jobs:
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
-          # Compila usando o monitor fantasma (xvfb-run)
+          # Compila forçando o motor gráfico básico (opengl3) para não crashar
           cd $PROJECT_DIR
           mkdir -p export_build
-          xvfb-run godot --headless --editor --quit || true
-          xvfb-run godot --headless --export-debug "Android" export_build/mocap.apk
+          godot --headless --rendering-driver opengl3 --editor --quit || true
+          godot --headless --rendering-driver opengl3 --export-debug "Android" export_build/mocap.apk
           
       - name: Disponibilizar APK para Download
         uses: actions/upload-artifact@v4
