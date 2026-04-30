@@ -3,7 +3,7 @@ on: workflow_dispatch
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Baixar o seu código
         uses: actions/checkout@v4
@@ -13,6 +13,14 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+          
+      - name: Instalar Monitor Virtual (Corrige o Erro 11)
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+          
+      - name: Criar Chave de Segurança Android (Keystore)
+        run: |
+          mkdir -p ~/.android
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore ~/.android/debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
           
       - name: Instalar Godot
         run: |
@@ -29,23 +37,23 @@ jobs:
           
       - name: Montar Projeto e Injetar IA
         run: |
-          # 1. Extrai o seu projeto (que agora está leve)
+          # Extrai o seu projeto
           unzip *.zip -d projeto
           PROJECT_DIR=$(dirname $(find projeto -name "project.godot" | head -n 1))
           
-          # 2. BAIXA A IA DIRETAMENTE (O truque para ignorar os 99MB)
+          # Baixa a IA do MediaPipe
           wget https://github.com/j20001970/GDMP/releases/download/v0.6.0/gdmp-v0.6.0-android.zip -O plugin.zip
           unzip plugin.zip -d temp_plugin
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
-          # 3. Compila o APK final
+          # Compila usando o monitor fantasma (xvfb-run)
           cd $PROJECT_DIR
           mkdir -p export_build
-          godot --headless --editor --quit || true
-          godot --headless --export-debug "Android" export_build/mocap.apk
+          xvfb-run godot --headless --editor --quit || true
+          xvfb-run godot --headless --export-debug "Android" export_build/mocap.apk
           
-      - name: Disponibilizar APK para você
+      - name: Disponibilizar APK para Download
         uses: actions/upload-artifact@v4
         with:
           name: Aplicativo-Mocap-Final
