@@ -50,8 +50,8 @@ jobs:
           mkdir -p $PROJECT_DIR/android/build
           unzip ~/.local/share/godot/export_templates/4.2.2.stable/android_source.zip -d $PROJECT_DIR/android/build/
           
-          # 3. Baixa a IA do MediaPipe
-          wget https://github.com/j20001970/GDMP/releases/download/v0.6.0/gdmp-v0.6.0-android.zip -O plugin.zip
+          # 3. Baixa a IA do MediaPipe (Link Corrigido para v0.6)
+          wget https://github.com/j20001970/GDMP/releases/download/v0.6/GDMP-v0.6.zip -O plugin.zip
           unzip plugin.zip -d temp_plugin
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
