@@ -3,7 +3,7 @@ on: workflow_dispatch
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Baixar o seu código
         uses: actions/checkout@v4
@@ -22,7 +22,7 @@ jobs:
           mkdir -p $HOME/.android
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore $HOME/.android/debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
           
-      - name: Instalar Godot 4.4 (Para suportar a IA atualizada)
+      - name: Instalar Godot 4.4
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.4-stable/Godot_v4.4-stable_linux.x86_64.zip
           unzip Godot_v4.4-stable_linux.x86_64.zip
@@ -41,26 +41,24 @@ jobs:
           ANDROID_KEYSTORE_DEBUG_USER: android
           ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
-          # 1. Extrai o seu projeto pelo nome exato
+          # Extrai o seu projeto pelo nome exato
           unzip inse-prototipo.zip -d projeto
           PROJECT_DIR=$(dirname $(find projeto -name "project.godot" | head -n 1))
           
-          # 2. LIMPEZA DO CACHE
-          echo "Limpando cache antigo do Godot..."
+          # LIMPEZA DO CACHE
           rm -rf $PROJECT_DIR/.godot
           
-          # 3. Recriar a pasta "android" do zero para o Gradle funcionar!
-          echo "Recriando pasta de build do Android..."
+          # Recriar a pasta "android" do zero
           mkdir -p $PROJECT_DIR/android/build
           unzip $HOME/.local/share/godot/export_templates/4.4.stable/android_source.zip -d $PROJECT_DIR/android/build/
           
-          # 4. Baixa a IA do MediaPipe
+          # Baixa a IA do MediaPipe
           wget https://github.com/j20001970/GDMP/releases/download/v0.6/GDMP-v0.6.zip -O plugin.zip
           unzip plugin.zip -d temp_plugin
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
-          # 5. Configurar as rotas pro Godot achar o Android SDK no servidor
+          # Configurar as rotas pro Godot achar o Android SDK
           export EDITOR_SETTINGS="$HOME/.config/godot/editor_settings-4.tres"
           mkdir -p "$HOME/.config/godot"
           echo "[gd_resource type=\"EditorSettings\" format=3]" > $EDITOR_SETTINGS
@@ -70,7 +68,7 @@ jobs:
           echo "export/android/debug_keystore_user = \"android\"" >> $EDITOR_SETTINGS
           echo "export/android/debug_keystore_pass = \"android\"" >> $EDITOR_SETTINGS
           
-          # 6. Compila o projeto (Com o xvfb blindado no modo "Automático")
+          # Compila o projeto
           cd $PROJECT_DIR
           mkdir -p export_build
           xvfb-run -a godot --headless --rendering-driver opengl3 --editor --quit || true
