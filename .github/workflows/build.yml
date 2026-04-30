@@ -35,7 +35,7 @@ jobs:
           unzip Godot_v4.4-stable_export_templates.tpz -d temp/
           mv temp/templates/* $HOME/.local/share/godot/export_templates/4.4.stable/
           
-      - name: Montar Projeto, Recriar Android e Injetar IA
+      - name: Montar Projeto, Limpar Cache e Injetar IA
         env:
           ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/.android/debug.keystore
           ANDROID_KEYSTORE_DEBUG_USER: android
@@ -45,18 +45,22 @@ jobs:
           unzip inse-prototipo.zip -d projeto
           PROJECT_DIR=$(dirname $(find projeto -name "project.godot" | head -n 1))
           
-          # 2. Recriar a pasta "android" do zero para o Gradle funcionar!
+          # 2. LIMPEZA DO CACHE (A cura para o Erro 134)
+          echo "Limpando cache antigo do Godot..."
+          rm -rf $PROJECT_DIR/.godot
+          
+          # 3. Recriar a pasta "android" do zero para o Gradle funcionar!
           echo "Recriando pasta de build do Android..."
           mkdir -p $PROJECT_DIR/android/build
           unzip $HOME/.local/share/godot/export_templates/4.4.stable/android_source.zip -d $PROJECT_DIR/android/build/
           
-          # 3. Baixa a IA do MediaPipe
+          # 4. Baixa a IA do MediaPipe
           wget https://github.com/j20001970/GDMP/releases/download/v0.6/GDMP-v0.6.zip -O plugin.zip
           unzip plugin.zip -d temp_plugin
           mkdir -p $PROJECT_DIR/addons
           cp -r temp_plugin/addons/* $PROJECT_DIR/addons/
           
-          # 4. Configurar as rotas pro Godot achar o Android SDK no servidor
+          # 5. Configurar as rotas pro Godot achar o Android SDK no servidor
           export EDITOR_SETTINGS="$HOME/.config/godot/editor_settings-4.tres"
           mkdir -p "$HOME/.config/godot"
           echo "[gd_resource type=\"EditorSettings\" format=3]" > $EDITOR_SETTINGS
@@ -66,7 +70,7 @@ jobs:
           echo "export/android/debug_keystore_user = \"android\"" >> $EDITOR_SETTINGS
           echo "export/android/debug_keystore_pass = \"android\"" >> $EDITOR_SETTINGS
           
-          # 5. Compila o projeto (com motor gráfico blindado)
+          # 6. Compila o projeto (com motor gráfico blindado e cache limpo)
           cd $PROJECT_DIR
           mkdir -p export_build
           xvfb-run godot --headless --rendering-driver opengl3 --editor --quit || true
